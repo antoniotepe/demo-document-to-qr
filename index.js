@@ -35,7 +35,7 @@ app.post('/create-pdf', (req, res) => {
         
         if(err) return res.status(500).send('Hubo un error al crear el pdf');
 
-        const downloadLink = `http://localhost:3000/download/document.pdf`;
+        const downloadLink = `https://demo-document-to-qr.onrender.com/download/document.pdf`;
 
         const qrCode = qr.imageSync(downloadLink, { type: 'png' });
 
@@ -58,6 +58,6 @@ app.get('/download/document.pdf', (req, res) => {
   });
   
   app.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+    console.log('Server running on https://demo-document-to-qr.onrender.com:3000');
   });
 
