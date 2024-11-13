@@ -36,7 +36,14 @@ app.post('/create-pdf', async (req, res) => {
     `;
 
     try {
-        const browser = await puppeteer.launch({ headless: true });
+        // Configuración de Puppeteer para Render
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+            ],
+        });
         const page = await browser.newPage();
         await page.setContent(html);
 
@@ -46,7 +53,6 @@ app.post('/create-pdf', async (req, res) => {
         await browser.close();
 
         const downloadLink = `${req.protocol}://${req.get('host')}${req.baseUrl}/download/document.pdf`;
-
 
         // Generar código QR con el enlace de descarga
         const qrImagePath = path.join(outputDir, 'qr-code.png');
@@ -87,4 +93,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
