@@ -1,6 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const pdf = require("html-pdf");
+const puppeteer = require("puppeteer");
 const qr = require("qr-image");
 const fs = require("fs");
 const path = require("path");
@@ -10,16 +10,18 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Asegúrate de que la carpeta 'output' existe
-if (!fs.existsSync('./output')) {
-    fs.mkdirSync('./output');
+const outputDir = path.join(__dirname, 'output');
+if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
 }
 
+// Ruta principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.post('/create-pdf', (req, res) => {
+// Generación de PDF y QR
+app.post('/create-pdf', async (req, res) => {
     const { content } = req.body;
 
     const html = `
@@ -33,15 +35,20 @@ app.post('/create-pdf', (req, res) => {
         </html>
     `;
 
-    const options = { format: 'Letter' };
+    try {
+        const browser = await puppeteer.launch({ headless: true });
+        const page = await browser.newPage();
+        await page.setContent(html);
 
-    pdf.create(html, options).toFile('./output/document.pdf', (err, result) => {
-        if (err) return res.status(500).send('Hubo un error al crear el pdf');
+        // Guardar PDF
+        const pdfPath = path.join(outputDir, 'document.pdf');
+        await page.pdf({ path: pdfPath, format: 'Letter' });
+        await browser.close();
 
-        const downloadLink = `http://localhost:3000/download/document.pdf`;
+        const downloadLink = `${req.protocol}://${req.get('host')}/download/document.pdf`;
 
-        // Generar el código QR como archivo de imagen PNG
-        const qrImagePath = path.join(__dirname, 'output', 'qr-code.png');
+        // Generar código QR con el enlace de descarga
+        const qrImagePath = path.join(outputDir, 'qr-code.png');
         const qrCodeImage = qr.image(downloadLink, { type: 'png' });
 
         qrCodeImage.pipe(fs.createWriteStream(qrImagePath))
@@ -58,18 +65,25 @@ app.post('/create-pdf', (req, res) => {
                 console.error('Error al guardar el código QR:', err);
                 res.status(500).send('Hubo un error al crear el código QR');
             });
-    });
+
+    } catch (error) {
+        console.error('Error al crear el PDF:', error);
+        res.status(500).send('Hubo un error al crear el PDF');
+    }
 });
 
 // Ruta para descargar el PDF
 app.get('/download/document.pdf', (req, res) => {
-    const filePath = path.join(__dirname, 'output', 'document.pdf');
+    const filePath = path.join(outputDir, 'document.pdf');
     res.download(filePath);
 });
 
 // Servir la imagen QR como un archivo estático
 app.use('/output', express.static(path.join(__dirname, 'output')));
 
-app.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
+
