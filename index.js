@@ -44,6 +44,7 @@ app.post('/create-pdf', async (req, res) => {
                 '--disable-setuid-sandbox',
             ],
         });
+    
         const page = await browser.newPage();
         await page.setContent(html);
 
