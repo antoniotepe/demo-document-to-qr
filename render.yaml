@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: pdf-qr-generator
+    env: node
+    buildCommand: ./build.sh
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
