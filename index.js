@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
+const chromium = require('@sparticuz/chromium');
 const qr = require("qr-image");
 const fs = require("fs");
 const path = require("path");
@@ -15,12 +16,10 @@ if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
 }
 
-// Ruta principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Generación de PDF y QR
 app.post('/create-pdf', async (req, res) => {
     const { content } = req.body;
 
@@ -36,26 +35,22 @@ app.post('/create-pdf', async (req, res) => {
     `;
 
     try {
-        // Configuración de Puppeteer para Render
         const browser = await puppeteer.launch({
+            executablePath: await chromium.executablePath(),
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
             headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-            ],
         });
     
         const page = await browser.newPage();
         await page.setContent(html);
 
-        // Guardar PDF
         const pdfPath = path.join(outputDir, 'document.pdf');
         await page.pdf({ path: pdfPath, format: 'Letter' });
         await browser.close();
 
         const downloadLink = `${req.protocol}://${req.get('host')}${req.baseUrl}/download/document.pdf`;
 
-        // Generar código QR con el enlace de descarga
         const qrImagePath = path.join(outputDir, 'qr-code.png');
         const qrCodeImage = qr.image(downloadLink, { type: 'png' });
 
@@ -80,13 +75,11 @@ app.post('/create-pdf', async (req, res) => {
     }
 });
 
-// Ruta para descargar el PDF
 app.get('/download/document.pdf', (req, res) => {
     const filePath = path.join(outputDir, 'document.pdf');
     res.download(filePath);
 });
 
-// Servir la imagen QR como un archivo estático
 app.use('/output', express.static(path.join(__dirname, 'output')));
 
 const PORT = process.env.PORT || 3000;
