@@ -45,7 +45,8 @@ app.post('/create-pdf', async (req, res) => {
         await page.pdf({ path: pdfPath, format: 'Letter' });
         await browser.close();
 
-        const downloadLink = `https://demo-document-to-qr.onrender.com/download/document.pdf`;
+        const downloadLink = `${req.protocol}://${req.get('host')}${req.baseUrl}/download/document.pdf`;
+
 
         // Generar código QR con el enlace de descarga
         const qrImagePath = path.join(outputDir, 'qr-code.png');
